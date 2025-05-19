@@ -196,7 +196,6 @@ sections:
         checks:
           - ssm_ec2instance_automatic_protection_check
           - ssm_ec2instance_remove_interactive_access_check
-          - 
 
   - name: Operational Excellence
     description: |

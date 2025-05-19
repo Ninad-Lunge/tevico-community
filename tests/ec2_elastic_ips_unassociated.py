@@ -10,8 +10,6 @@ DATE: 2025-05-15
 import boto3
 from botocore.stub import Stubber
 from botocore.exceptions import BotoCoreError
-from boto3.session import Session as Boto3Session
-# from unittest.mock import MagicMock
 
 from library.aws.checks.ec2.ec2_elastic_ips_unassociated import ec2_elastic_ips_unassociated
 from tevico.engine.entities.report.check_model import (
@@ -66,6 +64,7 @@ class DummySession:
     def client(self, service_name):
         return self._client
 
+
 def test_check_with_mocked_unassociated_eips():
     """Test that the check flags unassociated Elastic IPs as FAILED."""
     ec2 = boto3.client("ec2", region_name="us-east-1")
@@ -80,12 +79,12 @@ def test_check_with_mocked_unassociated_eips():
     stubber.activate()
 
     check = ec2_elastic_ips_unassociated(metadata=build_check_metadata())
-    report = check.execute(connection=DummySession(ec2)) # type: ignore[arg-type]
+    report = check.execute(connection=DummySession(ec2))
 
     assert report.status == CheckStatus.FAILED
     assert len(report.resource_ids_status) == 1
     assert report.resource_ids_status[0].status == CheckStatus.FAILED
-    assert "unassociated" in (report.resource_ids_status[0].summary or "")
+    assert "unassociated" in report.resource_ids_status[0].summary
 
 
 def test_check_with_no_eips():
@@ -97,7 +96,7 @@ def test_check_with_no_eips():
     stubber.activate()
 
     check = ec2_elastic_ips_unassociated(metadata = build_check_metadata())
-    report = check.execute(connection = DummySession(ec2)) # type: ignore[arg-type]
+    report = check.execute(connection = DummySession(ec2))
 
     assert report.status == CheckStatus.NOT_APPLICABLE
     assert len(report.resource_ids_status) == 1
@@ -122,7 +121,7 @@ def test_check_with_all_associated_eips():
     stubber.activate()
 
     check = ec2_elastic_ips_unassociated(metadata = build_check_metadata())
-    report = check.execute(connection = DummySession(ec2)) # type: ignore[arg-type]
+    report = check.execute(connection = DummySession(ec2))
 
     assert report.status == CheckStatus.PASSED
     assert report.resource_ids_status[0].status == CheckStatus.PASSED
@@ -147,7 +146,7 @@ def test_check_with_mixed_eips():
     stubber.activate()
 
     check = ec2_elastic_ips_unassociated(metadata = build_check_metadata())
-    report = check.execute(connection = DummySession(ec2)) # type: ignore[arg-type]
+    report = check.execute(connection = DummySession(ec2))
 
     assert report.status == CheckStatus.FAILED
     assert len(report.resource_ids_status) == 2
@@ -162,7 +161,7 @@ def test_check_with_boto_exception():
             raise BotoCoreError()
 
     check = ec2_elastic_ips_unassociated(metadata = build_check_metadata())
-    report = check.execute(connection = FailingSession()) # type: ignore[arg-type]
+    report = check.execute(connection = FailingSession())
 
     assert report.status == CheckStatus.UNKNOWN
     assert len(report.resource_ids_status) == 1
@@ -179,8 +178,8 @@ def test_check_with_missing_fields():
     stubber.activate()
 
     check = ec2_elastic_ips_unassociated(metadata = build_check_metadata())
-    report = check.execute(connection = DummySession(ec2)) # type: ignore[arg-type]
+    report = check.execute(connection = DummySession(ec2))
 
     assert report.status == CheckStatus.FAILED
     assert len(report.resource_ids_status) == 1
-    assert "Unknown" in (report.resource_ids_status[0].summary or "")
+    assert "Unknown" in report.resource_ids_status[0].summary
