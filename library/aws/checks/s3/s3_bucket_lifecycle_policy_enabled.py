@@ -15,9 +15,22 @@ from tevico.engine.entities.check.check import Check
 
 class s3_bucket_lifecycle_policy_enabled(Check):
     def execute(self, connection: boto3.Session) -> CheckReport:
-        s3_client = connection.client('s3')
         report = CheckReport(name=__name__)
         report.resource_ids_status = []
+
+        try:
+            s3_client = connection.client('s3')
+        except (BotoCoreError, ClientError) as e:
+            report.status = CheckStatus.UNKNOWN
+            report.resource_ids_status.append(
+                ResourceStatus(
+                    resource=GeneralResource(name=""),
+                    status=CheckStatus.UNKNOWN,
+                    summary="Failed to create S3 client.",
+                    exception=str(e)
+                )
+            )
+            return report
 
         try:
             response = s3_client.list_buckets()
@@ -48,7 +61,6 @@ class s3_bucket_lifecycle_policy_enabled(Check):
                     )
                 except ClientError as e:
                     if e.response["Error"]["Code"] == "NoSuchLifecycleConfiguration":
-                        report.status = CheckStatus.FAILED
                         report.resource_ids_status.append(
                             ResourceStatus(
                                 resource=AwsResource(arn=bucket_arn),
@@ -57,7 +69,6 @@ class s3_bucket_lifecycle_policy_enabled(Check):
                             )
                         )
                     else:
-                        report.status = CheckStatus.UNKNOWN
                         report.resource_ids_status.append(
                             ResourceStatus(
                                 resource=AwsResource(arn=bucket_arn),
@@ -77,5 +88,17 @@ class s3_bucket_lifecycle_policy_enabled(Check):
                     exception=str(e)
                 )
             )
+            return report
+
+        # Determine overall status
+        failed_found = any(r.status == CheckStatus.FAILED for r in report.resource_ids_status)
+        unknown_found = any(r.status == CheckStatus.UNKNOWN for r in report.resource_ids_status)
+
+        if failed_found:
+            report.status = CheckStatus.FAILED
+        elif unknown_found:
+            report.status = CheckStatus.UNKNOWN
+        else:
+            report.status = CheckStatus.PASSED
 
         return report
