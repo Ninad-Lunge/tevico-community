@@ -1,0 +1,81 @@
+Provider: "aws"
+CheckID: "ebs_volume_lifecycle_policy_enabled"
+CheckTitle: "Ensure EBS volumes are managed by a lifecycle policy"
+CheckType:
+  - "Cost Optimization"
+  - "Resilience"
+ServiceName: "ec2"
+SubServiceName: "ebs"
+ResourceIdTemplate: "arn:aws:ec2:::volume/volume-id"
+Severity: medium
+ResourceType: "AwsEc2Volume"
+Description: "Checks whether EBS volumes are covered by a Data Lifecycle Manager (DLM) policy to automate snapshot management and cost control."
+Risk: "Unmanaged EBS volumes may not be backed up regularly and could accumulate unnecessary storage costs or data loss risks."
+RelatedUrl: "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/snapshot-lifecycle.html"
+Remediation:
+  Code:
+    CLI: |
+      aws dlm create-lifecycle-policy \
+        --execution-role-arn arn:aws:iam::account-id:role/AWSDataLifecycleManagerDefaultRole \
+        --description "Daily backup policy" \
+        --state ENABLED \
+        --policy-details '{
+          "ResourceTypes": ["VOLUME"],
+          "TargetTags": [
+            {
+              "Key": "backup",
+              "Value": "daily"
+            }
+          ],
+          "Schedules": [
+            {
+              "Name": "DailyBackups",
+              "CreateRule": {
+                "Interval": 24,
+                "IntervalUnit": "HOURS"
+              },
+              "RetainRule": {
+                "Count": 7
+              }
+            }
+          ]
+        }'
+    NativeIaC: ""
+    Other: ""
+    Terraform: |
+      resource "aws_dlm_lifecycle_policy" "daily_backups" {
+        description        = "Daily EBS backup policy"
+        execution_role_arn = "arn:aws:iam::account-id:role/AWSDataLifecycleManagerDefaultRole"
+        state              = "ENABLED"
+
+        policy_details {
+          resource_types = ["VOLUME"]
+
+          target_tags = {
+            backup = "daily"
+          }
+
+          schedule {
+            name = "DailyBackups"
+
+            create_rule {
+              interval      = 24
+              interval_unit = "HOURS"
+            }
+
+            retain_rule {
+              count = 7
+            }
+          }
+        }
+      }
+  Recommendation:
+    Text: "Use AWS DLM policies to automate snapshot creation and deletion for EBS volumes, improving backup reliability and reducing storage costs."
+    Url: "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/snapshot-lifecycle.html"
+Categories:
+  - "backup"
+  - "resilience"
+  - "storage"
+DependsOn: []
+RelatedTo: []
+Notes: "Ensure volumes have the required tags to match the DLM policy's target tags. This check assumes policies are in place but does not verify tag-based targeting."

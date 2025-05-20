@@ -1,0 +1,60 @@
+Provider: "aws"
+CheckID: "s3_bucket_lifecycle_policy_enabled"
+CheckTitle: "Ensure S3 buckets have lifecycle policies configured"
+CheckType:
+  - "Cost Optimization"
+  - "Data Management"
+ServiceName: "s3"
+SubServiceName: ""
+ResourceIdTemplate: "arn:partition:s3:::bucket_name"
+Severity: medium
+ResourceType: "AwsS3Bucket"
+Description: "Check whether S3 buckets have lifecycle policies to transition or expire objects, helping to reduce storage costs and manage data effectively."
+Risk: "Without lifecycle policies, old or unused S3 objects may accumulate and lead to increased storage costs or compliance issues."
+RelatedUrl: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html"
+Remediation:
+  Code:
+    CLI: |
+      aws s3api put-bucket-lifecycle-configuration --bucket my-bucket-name --lifecycle-configuration '{
+        "Rules": [
+          {
+            "ID": "ExpireOldObjects",
+            "Filter": {
+              "Prefix": ""
+            },
+            "Status": "Enabled",
+            "Expiration": {
+              "Days": 30
+            }
+          }
+        ]
+      }'
+    NativeIaC: ""
+    Other: ""
+    Terraform: |
+      resource "aws_s3_bucket_lifecycle_configuration" "example" {
+        bucket = aws_s3_bucket.example.id
+
+        rule {
+          id     = "ExpireOldObjects"
+          status = "Enabled"
+
+          expiration {
+            days = 30
+          }
+
+          filter {
+            prefix = ""
+          }
+        }
+      }
+  Recommendation:
+    Text: "Use S3 lifecycle policies to transition data to more cost-effective storage classes or expire them based on access patterns or compliance needs."
+    Url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html"
+Categories:
+  - "storage"
+  - "cost"
+  - "compliance"
+DependsOn: []
+RelatedTo: []
+Notes: "This check does not validate the content of the lifecycle rules, only that at least one rule exists."
