@@ -6,6 +6,8 @@ DATE: 2025-05-20
 
 import pytest
 from unittest.mock import MagicMock
+from botocore.exceptions import EndpointConnectionError
+
 from library.aws.checks.ebs.ebs_volume_lifecycle_policy_enabled import ebs_volume_lifecycle_policy_enabled
 from tevico.engine.entities.report.check_model import CheckStatus, CheckMetadata, Remediation, RemediationCode, RemediationRecommendation
 
@@ -15,6 +17,7 @@ def mock_dlm_client(monkeypatch):
     mock_client = MagicMock()
     monkeypatch.setattr("boto3.Session.client", lambda self, service_name: mock_client)
     return mock_client
+
 
 def build_check_metadata() -> CheckMetadata:
     return CheckMetadata(
@@ -72,7 +75,9 @@ def test_check_without_dlm_policy(mock_dlm_client):
     }
 
     check = ebs_volume_lifecycle_policy_enabled(metadata=build_check_metadata())
-    report = check.execute(MagicMock())
+    mock_session = MagicMock()
+    mock_session.client.return_value = mock_dlm_client
+    report = check.execute(mock_session)
 
     assert report.status == CheckStatus.FAILED
     assert report.resource_ids_status[0].status == CheckStatus.FAILED
@@ -82,6 +87,23 @@ def test_check_error_handling(mock_dlm_client):
     mock_dlm_client.get_lifecycle_policies.side_effect = Exception("Unexpected error")
 
     check = ebs_volume_lifecycle_policy_enabled(metadata=build_check_metadata())
-    report = check.execute(MagicMock())
+    
+    mock_session = MagicMock()
+    mock_session.client.return_value = mock_dlm_client
+    report = check.execute(mock_session)
 
     assert report.status == CheckStatus.UNKNOWN
+
+
+def test_check_with_boto_client_error(monkeypatch):
+    """Test that UNKNOWN status is returned if boto3 client creation fails."""
+    class FailingSession:
+        def client(self, service_name):
+            raise EndpointConnectionError(endpoint_url="https://ec2.amazonaws.com")
+
+    check = ebs_volume_lifecycle_policy_enabled(metadata=build_check_metadata())
+    report = check.execute(FailingSession()) # type: ignore[arg-type]
+
+    assert report.status == CheckStatus.UNKNOWN
+    assert report.resource_ids_status[0].status == CheckStatus.UNKNOWN
+    assert "Failed to create DLM client" in (report.resource_ids_status[0].summary or "")
