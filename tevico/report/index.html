@@ -164,11 +164,23 @@
                       <div class="modal-dialog modal-dialog-centered" role="document">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title">Severity Score Calculation</h5>
+                            <h5 class="modal-title">Severity Score</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body fw-normal" style="max-height: 25rem; overflow: auto;">
                             <div class="mb-3">
+                              <p class="mb-0">
+                                The Severity Score indicates your environtment's status <strong>based only on the
+                                  failed checks</strong>. The score is calculated in a way where more critical checks
+                                contribute more to the score than less critical checks. This allows you to quickly
+                                understand the overall infra posture of your environment and prioritize remediation
+                                efforts.
+                                <br><br>
+                                Each failed check contributes to the score based on its severity level, while
+                                passed checks do not affect the score. The higher the score, the more severe the
+                                issues are in your environment.
+                                <br><br>
+                              </p>
                               <p class="mb-0">
                                 The weightage of each severity level is as follows:
                               </p>
@@ -177,17 +189,6 @@
                                 <li>High: 3</li>
                                 <li>Medium: 2</li>
                                 <li>Low: 1</li>
-                              </ul>
-                            </div>
-                            <div class="mb-3">
-                              <p class="mb-0">And the weightage of each status is as follows:</p>
-                              <ul class="m-0">
-                                <li>Passed: 0</li>
-                                <li>Failed: 1</li>
-                                <li>Skipped: 0</li>
-                                <li>Not Applicable: 0</li>
-                                <li>Unknown: 0</li>
-                                <li>Errored: 0</li>
                               </ul>
                             </div>
                             <div class="mb-3">
